@@ -2564,6 +2564,7 @@ fun AerioTVNavHost(
                 // Live TV tab) scrolls + focuses its top channel.
                 miniPlayerVm.session.requestGuideTop()
             },
+            isBackGuarded = { miniPlayerVm.session.miniJustShown() },
         )
         // Radio Mode "Return to Channel": the holder is still playing the
         // channel, so the player adopts it with no re-tune.

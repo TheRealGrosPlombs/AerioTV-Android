@@ -37,6 +37,8 @@ fun BoxScope.TvMiniPlayerOverlay(
     state: MiniPlayerSession.State,
     onResume: () -> Unit,
     onJumpToTop: () -> Unit,
+    /** True while Back should be swallowed (just minimized; guide still settling). */
+    isBackGuarded: () -> Boolean = { false },
 ) {
     if (state !is MiniPlayerSession.State.Active) return
     val isTv = (LocalConfiguration.current.uiMode and Configuration.UI_MODE_TYPE_MASK) ==
@@ -52,6 +54,10 @@ fun BoxScope.TvMiniPlayerOverlay(
     var pressCount by remember { mutableIntStateOf(0) }
     var debounce by remember { mutableStateOf<Job?>(null) }
     BackHandler {
+        // The player just minimized and the guide may not be on screen or
+        // focusable yet: a Back now is almost always an impatient repeat, not
+        // a request to expand. Consume it and do nothing.
+        if (isBackGuarded()) return@BackHandler
         pressCount++
         debounce?.cancel()
         debounce = scope.launch {

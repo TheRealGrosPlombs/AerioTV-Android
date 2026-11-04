@@ -143,8 +143,28 @@ class MiniPlayerSession @Inject constructor() {
         val pending = (_state.value as? State.Pending)?.channel
             ?: (_state.value as? State.Active)?.channel
             ?: return
+        // Stamp only the Pending -> Active transition so a repeated call while
+        // already Active can't extend the guard window.
+        if (_state.value is State.Pending) {
+            miniShownAtMs = android.os.SystemClock.uptimeMillis()
+        }
         _state.value = State.Active(pending)
     }
+
+    /** When the mini last became Active (uptime ms); 0 = never. */
+    @Volatile var miniShownAtMs: Long = 0L
+        private set
+
+    /**
+     * True for [MINI_GUARD_MS] after the player minimizes to the mini. On TV
+     * the guide takes a moment to show and take focus after a Back, so an
+     * impatient second Back used to land on the mini overlay, read as "expand",
+     * and bounce the user straight back to fullscreen. Callers ignore Back
+     * while this is true.
+     */
+    fun miniJustShown(): Boolean =
+        miniShownAtMs != 0L &&
+            android.os.SystemClock.uptimeMillis() - miniShownAtMs < MINI_GUARD_MS
 
     /** User dismissed the mini-player or hit explicit Close in fullscreen. */
     fun dismiss() {
@@ -175,7 +195,11 @@ class MiniPlayerSession @Inject constructor() {
         expandStartedAtMs != 0L &&
             android.os.SystemClock.uptimeMillis() - expandStartedAtMs < EXPAND_GUARD_MS
 
-    private companion object { const val EXPAND_GUARD_MS = 1_000L }
+    private companion object {
+        const val EXPAND_GUARD_MS = 1_000L
+        /** Back is ignored this long after the mini appears (see [miniJustShown]). */
+        const val MINI_GUARD_MS = 1_000L
+    }
 
     sealed interface State {
         /** No mini-player; no playback context. */

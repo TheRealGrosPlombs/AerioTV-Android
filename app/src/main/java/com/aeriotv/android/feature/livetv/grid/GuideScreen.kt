@@ -921,7 +921,11 @@ fun GuideScreen(
             if (!stranded) return@LaunchedEffect
             // Let a legitimate hand-off (dialog opening, route change, the
             // bar claiming focus a frame later) settle before assuming a trap.
-            delay(350L)
+            // Right after the player minimizes to the mini the hand-off is
+            // just the player route popping, which the RESUMED gate above
+            // already waits out, so reclaim focus quickly: until then D-pad
+            // presses go nowhere and the guide feels unresponsive.
+            delay(if (miniPlayerVm.session.miniJustShown()) 60L else 350L)
             while (com.aeriotv.android.ui.tv.TvColdStartFocus.pending) delay(50L)
             if (guideHasFocus || topNavHasFocus.value) return@LaunchedEffect
             if (!guideLifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
