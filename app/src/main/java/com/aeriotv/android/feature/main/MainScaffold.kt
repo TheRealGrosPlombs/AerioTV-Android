@@ -432,6 +432,7 @@ fun MainScaffold(
             splitVod = splitVod,
             hasMovies = hasMoviesContent,
             hasSeries = hasSeriesContent,
+            hasMediaFavorites = true,
         )
         stickyTabs += live
         stickyTabs -= AppTab.Favorites
@@ -447,6 +448,8 @@ fun MainScaffold(
         if (moviesDenied) stickyTabs -= AppTab.Movies
         if (seriesDenied) stickyTabs -= AppTab.TVShows
         if (moviesDenied && seriesDenied) stickyTabs -= AppTab.OnDemand
+        // The starred-titles tab only makes sense while Movies or TV Shows exist.
+        if (AppTab.Movies !in stickyTabs && AppTab.TVShows !in stickyTabs) stickyTabs -= AppTab.MediaFavorites
         visibleTabs(
             hasFavorites = AppTab.Favorites in stickyTabs,
             hasVod = AppTab.OnDemand in stickyTabs,
@@ -454,6 +457,7 @@ fun MainScaffold(
             splitVod = splitVod,
             hasMovies = AppTab.Movies in stickyTabs,
             hasSeries = AppTab.TVShows in stickyTabs,
+            hasMediaFavorites = AppTab.MediaFavorites in stickyTabs,
         )
     }
     // One line per change of the inputs, so "why is the tab hidden" is provable
@@ -2403,6 +2407,12 @@ private fun MainTabContent(
                     onEpisodeResumeFromStart = onEpisodeResumeFromStart,
                 )
             }
+            AppTab.MediaFavorites -> {
+    com.aeriotv.android.feature.movies.MediaFavoritesTabContent(
+                    onMovieClick = { uuid -> onMovieClick(uuid) },
+                    onSeriesClick = { id -> onSeriesClick(id) },
+                )
+            }
             AppTab.OnDemand -> {
     OnDemandTabContent(
                     onMovieClick = { movie -> onMovieClick(movie.uuid) },
@@ -3433,6 +3443,8 @@ internal fun visibleTabs(
     splitVod: Boolean = false,
     hasMovies: Boolean = hasVod,
     hasSeries: Boolean = hasVod,
+    /** Starred Movies / TV Shows tab (split layout only, needs Movies or TV Shows). */
+    hasMediaFavorites: Boolean = false,
 ): List<AppTab> = buildList {
     add(AppTab.LiveTV)
     if (hasFavorites) add(AppTab.Favorites)
@@ -3440,6 +3452,7 @@ internal fun visibleTabs(
     if (splitVod) {
         if (hasMovies) add(AppTab.Movies)
         if (hasSeries) add(AppTab.TVShows)
+        if (hasMediaFavorites && (hasMovies || hasSeries)) add(AppTab.MediaFavorites)
     } else if (hasVod) add(AppTab.OnDemand)
     add(AppTab.Settings)
     // AppTab.Search is deliberately NOT a pill: on TV it renders as the

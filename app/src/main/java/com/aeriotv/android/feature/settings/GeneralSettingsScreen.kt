@@ -133,7 +133,7 @@ fun GeneralSettingsScreen(
                     // on phones it does not exist at all. On Demand and Favorites
                     // are no longer tabs on any form factor (media center 2026-09-10).
                     val tabs = AppTab.entries.filter {
-                        it != AppTab.Search && it != AppTab.OnDemand && it != AppTab.Favorites
+                        it != AppTab.Search && it != AppTab.OnDemand && it != AppTab.Favorites && it != AppTab.MediaFavorites
                     }
                     SettingsPickerRow(
                         title = "Default Landing Tab",

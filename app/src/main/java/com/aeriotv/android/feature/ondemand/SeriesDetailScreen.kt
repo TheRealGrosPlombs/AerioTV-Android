@@ -38,6 +38,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
+import com.aeriotv.android.feature.movies.toMediaItem
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PlayCircle
@@ -568,6 +570,16 @@ fun SeriesDetailScreen(
                                     title = "Play from Beginning",
                                     icon = Icons.Filled.Replay,
                                     onClick = { playEpisode(target.episode, true) },
+                                )
+                            }
+                            // Favorite star (same list as the Favorites tab):
+                            // focusable with the remote, OK toggles.
+                            series.toMediaItem().let { favItem ->
+                                val isFav = favItem.key in watchlistKeys
+                                TvHeroActionButton(
+                                    title = if (isFav) "Favorited" else "Favorite",
+                                    icon = if (isFav) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                                    onClick = { watchlistVm.toggle(favItem) },
                                 )
                             }
                             if (versionOptions.size > 1) {

@@ -8,6 +8,8 @@ import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.filled.OndemandVideo
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.outlined.Favorite
@@ -85,6 +87,18 @@ enum class AppTab(
         label = "TV Shows",
         iconSelected = Icons.Filled.Tv,
         iconUnselected = Icons.Outlined.Tv,
+    ),
+    /**
+     * Starred Movies and TV Shows (Movies | TV Shows switch inside). Distinct
+     * from [Favorites], which is the live-channel favorites that now live as a
+     * pinned Live TV pill and are never a tab. Only shown when the source
+     * serves Movies or TV Shows (split media-center layout).
+     */
+    MediaFavorites(
+        id = "mediafavorites",
+        label = "Favorites",
+        iconSelected = Icons.Filled.Star,
+        iconUnselected = Icons.Outlined.StarBorder,
     ),
     Settings(
         id = "settings",
