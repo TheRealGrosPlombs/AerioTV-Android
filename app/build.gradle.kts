@@ -93,6 +93,20 @@ android {
             isDebuggable = false
             signingConfig = signingConfigs.getByName("debug")
             matchingFallbacks += "release"
+            // Same dev identity as debug, so perf still installs over a debug
+            // install and neither collides with the stable release.
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+        }
+        // DEV BUILD: installs next to the stable AerioTV on the same device.
+        // A different applicationId (com.aeriotv.android.dev) means a separate
+        // app with its own data, and no signature clash with the stable APK
+        // (which is signed with the upstream release key). The launcher label
+        // and TV banner come from src/debug/res. The release build keeps the
+        // plain com.aeriotv.android id.
+        debug {
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
         }
         release {
             // R8 on (Play Console 2026-09-09: "App optimization is below our
