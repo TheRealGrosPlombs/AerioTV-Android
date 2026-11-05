@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dev build label, so it is distinguishable from the stable AerioTV install
+     (same device, different applicationId: see app/build.gradle.kts). -->
+<resources>
+    <string name="app_name">AerioTV Dev</string>
+</resources>
