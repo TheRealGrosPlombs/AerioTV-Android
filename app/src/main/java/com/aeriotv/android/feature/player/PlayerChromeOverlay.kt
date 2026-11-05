@@ -97,7 +97,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -2201,7 +2204,14 @@ fun AudioTracksSheet(
     onDismiss: () -> Unit,
 ) {
     com.aeriotv.android.ui.FormFactorModal(onDismiss = onDismiss) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
+        // Scrollable: on TV this sits in a dialog capped at 480dp, so with a few
+        // audio tracks the Audio Sync control below them was clipped off the
+        // bottom and the remote could never reach it.
+        Column(
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 4.dp),
+        ) {
             Text(
                 text = "Audio Track",
                 style = MaterialTheme.typography.titleMedium,
@@ -2253,41 +2263,125 @@ fun AudioTracksSheet(
                 syncMs = clamped
                 com.aeriotv.android.core.playback.AudioSyncOffset.offsetMs = clamped
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Audio Sync",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontWeight = FontWeight.SemiBold,
+            if (rememberIsTvDevice()) {
+                // TV: one focusable row the remote can adjust. The touch Slider
+                // below is unusable with a D-pad (its key step is 1% of the
+                // range, which the 50 ms snap rounded away).
+                TvAudioSyncRow(syncMs = syncMs, onChange = { applySync(it) })
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Audio Sync",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        text = if (syncMs == 0L) "0 ms" else "%+d ms".format(syncMs),
+                        style = MaterialTheme.typography.bodyMedium.subtext(),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Slider(
+                    value = syncMs.toFloat(),
+                    onValueChange = { applySync((it / 50f).roundToInt() * 50L) },
+                    valueRange = com.aeriotv.android.core.playback.AudioSyncOffset.MIN_MS.toFloat()..
+                        com.aeriotv.android.core.playback.AudioSyncOffset.MAX_MS.toFloat(),
                 )
-                Spacer(Modifier.weight(1f))
-                Text(
-                    text = if (syncMs == 0L) "0 ms" else "%+d ms".format(syncMs),
-                    style = MaterialTheme.typography.bodyMedium.subtext(),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Slider(
-                value = syncMs.toFloat(),
-                onValueChange = { applySync((it / 50f).roundToInt() * 50L) },
-                valueRange = com.aeriotv.android.core.playback.AudioSyncOffset.MIN_MS.toFloat()..
-                    com.aeriotv.android.core.playback.AudioSyncOffset.MAX_MS.toFloat(),
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { applySync(syncMs - 100L) }) { Text("-100 ms") }
-                TextButton(onClick = { applySync(syncMs + 100L) }) { Text("+100 ms") }
-                Spacer(Modifier.weight(1f))
-                if (syncMs != 0L) {
-                    TextButton(onClick = { applySync(0L) }) { Text("Reset") }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = { applySync(syncMs - 100L) }) { Text("-100 ms") }
+                    TextButton(onClick = { applySync(syncMs + 100L) }) { Text("+100 ms") }
+                    Spacer(Modifier.weight(1f))
+                    if (syncMs != 0L) {
+                        TextButton(onClick = { applySync(0L) }) { Text("Reset") }
+                    }
                 }
             }
             Text(
-                text = "Positive plays audio later; negative plays it earlier.",
+                text = if (rememberIsTvDevice()) {
+                    "Left / Right nudge by 10 ms (hold to go faster), OK resets. Positive plays audio later; negative plays it earlier."
+                } else {
+                    "Positive plays audio later; negative plays it earlier."
+                },
                 style = MaterialTheme.typography.bodySmall.subtext(),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(12.dp))
         }
+    }
+}
+
+/** Audio Sync nudge per Left/Right press on TV, and the step once the key is held. */
+private const val AUDIO_SYNC_FINE_STEP_MS = 10L
+private const val AUDIO_SYNC_HELD_STEP_MS = 50L
+private const val AUDIO_SYNC_HELD_AFTER_REPEATS = 8
+
+/**
+ * TV Audio Sync control: a single focusable row. Left / Right nudge the offset
+ * by [AUDIO_SYNC_FINE_STEP_MS] per press (and by [AUDIO_SYNC_HELD_STEP_MS] once
+ * the key has auto-repeated [AUDIO_SYNC_HELD_AFTER_REPEATS] times, so a hold can
+ * still cross the +-1000 ms range); OK resets to 0. The key handler reads the
+ * live offset rather than the composed [syncMs], so rapid repeats between
+ * recompositions never act on a stale value.
+ */
+@Composable
+private fun TvAudioSyncRow(syncMs: Long, onChange: (Long) -> Unit) {
+    val shape = RoundedCornerShape(12.dp)
+    val atMin = syncMs <= com.aeriotv.android.core.playback.AudioSyncOffset.MIN_MS
+    val atMax = syncMs >= com.aeriotv.android.core.playback.AudioSyncOffset.MAX_MS
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .onKeyEvent { event ->
+                if (event.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) {
+                    return@onKeyEvent false
+                }
+                val step = if (event.nativeKeyEvent.repeatCount >= AUDIO_SYNC_HELD_AFTER_REPEATS) {
+                    AUDIO_SYNC_HELD_STEP_MS
+                } else {
+                    AUDIO_SYNC_FINE_STEP_MS
+                }
+                val current = com.aeriotv.android.core.playback.AudioSyncOffset.offsetMs
+                when (event.key) {
+                    androidx.compose.ui.input.key.Key.DirectionLeft -> { onChange(current - step); true }
+                    androidx.compose.ui.input.key.Key.DirectionRight -> { onChange(current + step); true }
+                    else -> false
+                }
+            }
+            .clip(shape)
+            .dpadFocusRing(shape = shape, washTint = MaterialTheme.colorScheme.primary)
+            .clickable { onChange(0L) }
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "Audio Sync",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.weight(1f))
+        androidx.compose.material3.Icon(
+            imageVector = androidx.compose.material.icons.Icons.Filled.Remove,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = if (atMin) 0.3f else 1f),
+            modifier = Modifier.size(16.dp),
+        )
+        Text(
+            text = if (syncMs == 0L) "0 ms" else "%+d ms".format(syncMs),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.widthIn(min = 88.dp),
+        )
+        androidx.compose.material3.Icon(
+            imageVector = androidx.compose.material.icons.Icons.Filled.Add,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = if (atMax) 0.3f else 1f),
+            modifier = Modifier.size(16.dp),
+        )
     }
 }
 
