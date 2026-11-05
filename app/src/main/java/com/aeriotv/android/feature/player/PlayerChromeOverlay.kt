@@ -40,6 +40,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FiberManualRecord
@@ -2363,7 +2364,7 @@ private fun TvAudioSyncRow(syncMs: Long, onChange: (Long) -> Unit) {
         )
         Spacer(Modifier.weight(1f))
         androidx.compose.material3.Icon(
-            imageVector = androidx.compose.material.icons.Icons.Filled.Remove,
+            imageVector = Icons.Filled.Remove,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary.copy(alpha = if (atMin) 0.3f else 1f),
             modifier = Modifier.size(16.dp),
@@ -2377,7 +2378,7 @@ private fun TvAudioSyncRow(syncMs: Long, onChange: (Long) -> Unit) {
             modifier = Modifier.widthIn(min = 88.dp),
         )
         androidx.compose.material3.Icon(
-            imageVector = androidx.compose.material.icons.Icons.Filled.Add,
+            imageVector = Icons.Filled.Add,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary.copy(alpha = if (atMax) 0.3f else 1f),
             modifier = Modifier.size(16.dp),
