@@ -195,6 +195,8 @@ fun GuideScreen(
     val dvrCanRecord = com.aeriotv.android.ui.LocalDvrAccess.current == "manage"
 
     val guideScale by settingsVm.guideScale.collectAsStateWithLifecycle()
+    // Settings > Live TV > Guide Channel Width (1.0 = stock, up to 2.0).
+    val guideChannelWidth by settingsVm.guideChannelWidth.collectAsStateWithLifecycle()
     val categoryPalette by settingsVm.categoryPalette.collectAsStateWithLifecycle(initialValue = com.aeriotv.android.core.category.CategoryPaletteState.Default)
     val displayScaleLiveTv by settingsVm.displayScaleLiveTV.collectAsStateWithLifecycle()
     val hiddenGroups by settingsVm.hiddenGroups.collectAsStateWithLifecycle()
@@ -265,7 +267,11 @@ fun GuideScreen(
     // with the app Text Size (not the system font size, unchanged from before).
     val appTextScale = com.aeriotv.android.ui.scale.LocalAppTextScale.current
     val hourWidth = if (isTv) 300.dp * guideScale * tvComfortScale else 320.dp * guideScale
-    val railWidth = if (isTv) 120.dp * tvComfortScale else 78.dp
+    val railBaseWidth = if (isTv) 120.dp * tvComfortScale else 78.dp
+    // User-widened channel column, never narrower than stock and never wider
+    // than 40% of the screen, so the program strip always keeps room.
+    val railMaxWidth = (LocalConfiguration.current.screenWidthDp * 0.4f).dp
+    val railWidth = maxOf(railBaseWidth, minOf(railBaseWidth * guideChannelWidth, railMaxWidth))
     // Phone cells carry the subtitle and two description lines (Logan
     // 2026-09-05, EPGGuideView.swift:3415: 98pt on the phone idiom, 72 on
     // the iPad), so they are taller. Phone = smallest width under 600dp,

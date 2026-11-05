@@ -92,6 +92,14 @@ private val Context.appDataStore: DataStore<Preferences> by preferencesDataStore
 const val GUIDE_SCALE_MIN = 0.5f
 const val GUIDE_SCALE_MAX = 2.0f
 
+/**
+ * Guide channel column width multiplier bounds. 1.0 is the stock width (the
+ * narrowest allowed); 2.0 doubles it. The guide additionally caps the column
+ * at a fraction of the screen so the program strip always keeps room.
+ */
+const val GUIDE_CHANNEL_WIDTH_MIN = 1.0f
+const val GUIDE_CHANNEL_WIDTH_MAX = 2.0f
+
 /** App-wide Text Size bounds (Appearance > Text Size). 5% stops, default 1.0. */
 const val TEXT_SCALE_MIN = 0.85f
 const val TEXT_SCALE_MAX = 1.50f
@@ -494,6 +502,23 @@ class AppPreferences @Inject constructor(
     suspend fun setGuideScale(value: Float) {
         store.edit {
             it[KEY_GUIDE_SCALE.s()] = value.coerceIn(GUIDE_SCALE_MIN, GUIDE_SCALE_MAX).toDouble()
+        }
+    }
+
+    /**
+     * Guide channel column width multiplier (Settings > Live TV > Guide Channel
+     * Width). Clamped [GUIDE_CHANNEL_WIDTH_MIN]..[GUIDE_CHANNEL_WIDTH_MAX];
+     * default 1.0 (stock width). Device-local: deliberately NOT profile scoped
+     * and not in the sync registry, so it never touches the shared sync schema.
+     */
+    val guideChannelWidth: Flow<Float> = scopedData.map {
+        (it[KEY_GUIDE_CHANNEL_WIDTH] ?: 1.0).toFloat()
+            .coerceIn(GUIDE_CHANNEL_WIDTH_MIN, GUIDE_CHANNEL_WIDTH_MAX)
+    }
+    suspend fun setGuideChannelWidth(value: Float) {
+        store.edit {
+            it[KEY_GUIDE_CHANNEL_WIDTH] =
+                value.coerceIn(GUIDE_CHANNEL_WIDTH_MIN, GUIDE_CHANNEL_WIDTH_MAX).toDouble()
         }
     }
 
@@ -3002,6 +3027,7 @@ class AppPreferences @Inject constructor(
         val KEY_DISPLAY_SCALE_MOVIES = doublePreferencesKey("display_scale_movies")
         val KEY_DISPLAY_SCALE_LIVE_TV = doublePreferencesKey("display_scale_live_tv")
         val KEY_GUIDE_SCALE = doublePreferencesKey("guide_scale")
+        val KEY_GUIDE_CHANNEL_WIDTH = doublePreferencesKey("guide_channel_width")
         val KEY_TEXT_SCALE = doublePreferencesKey("text_scale")
         val KEY_SUBTEXT_SCALE = doublePreferencesKey("subtext_scale")
         val KEY_TEXT_CONTRAST = doublePreferencesKey("text_contrast")

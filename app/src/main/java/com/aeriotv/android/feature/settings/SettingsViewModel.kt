@@ -184,6 +184,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { prefs.setGuideScale(value) }
     }
 
+    /** Guide channel column width multiplier (1.0 = stock, up to 2.0). */
+    val guideChannelWidth: StateFlow<Float> = prefs.guideChannelWidth
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 1f)
+    fun setGuideChannelWidth(value: Float) {
+        viewModelScope.launch { prefs.setGuideChannelWidth(value) }
+    }
+
     val hiddenGroups: StateFlow<Set<String>> = prefs.hiddenGroups
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
     fun setHiddenGroups(groups: Set<String>) {

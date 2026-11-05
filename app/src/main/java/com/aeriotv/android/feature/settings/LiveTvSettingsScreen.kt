@@ -112,6 +112,7 @@ fun LiveTvSettingsScreen(
     val showEpgBadges by viewModel.showEpgBadges(isTv).collectAsStateWithLifecycle(initialValue = true)
     val hiddenEpgBadges by viewModel.hiddenEpgBadges.collectAsStateWithLifecycle(initialValue = emptySet())
     val scaleLiveTV by viewModel.displayScaleLiveTV.collectAsStateWithLifecycle(initialValue = 1.0f)
+    val guideChannelWidth by viewModel.guideChannelWidth.collectAsStateWithLifecycle(initialValue = 1.0f)
     val programInfoButton by viewModel.guideProgramInfoButton
         .collectAsStateWithLifecycle(initialValue = GuideProgramInfoButton.OFF)
     val pibGuide by viewModel.programInfoButtonGuide.collectAsStateWithLifecycle(initialValue = false)
@@ -446,6 +447,24 @@ fun LiveTvSettingsScreen(
                     )
                 }
 
+                // MARK: Guide Channel Width
+                //
+                // Widens the channel column on the left of the guide (logo, number
+                // and name) so longer channel names are not cut off. 100% is the
+                // stock width and the minimum; the guide also caps the column at
+                // 40% of the screen so the program strip always keeps room.
+                settingsCard(
+                    header = "Guide Channel Width",
+                    footer = "Makes the channel column in the guide wider so longer channel names fit. 100% is the default and narrowest width. Changes apply live.",
+                ) {
+                    ScaleSliderRow(
+                        label = "Channel Column",
+                        value = guideChannelWidth,
+                        onValueChange = viewModel::setGuideChannelWidth,
+                        segments = GUIDE_CHANNEL_WIDTH_SEGMENTS,
+                    )
+                }
+
                 // MARK: Colors
                 //
                 // tvOS: the master toggle only; the palette is edited on the
@@ -614,4 +633,14 @@ private val DEFAULT_LIVE_TV_VIEW_OPTIONS = listOf(
     "" to "Automatic",
     "list" to "List",
     "guide" to "Guide",
+)
+
+/**
+ * Guide Channel Width stops: 100% (stock, the narrowest) up to 200% (double).
+ * Must stay within GUIDE_CHANNEL_WIDTH_MIN..GUIDE_CHANNEL_WIDTH_MAX in
+ * AppPreferences, which clamps whatever is stored or written.
+ */
+private val GUIDE_CHANNEL_WIDTH_SEGMENTS: List<Pair<Float, String>> = listOf(
+    1.00f to "100%", 1.15f to "115%", 1.30f to "130%",
+    1.50f to "150%", 1.75f to "175%", 2.00f to "200%",
 )
