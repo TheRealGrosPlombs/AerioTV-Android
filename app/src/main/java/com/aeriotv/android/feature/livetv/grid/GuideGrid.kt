@@ -865,7 +865,10 @@ private fun GridRow(
     // program-only match, same text as the list row. Phones and tablets only.
     val searchMatchText = if (isTv) null else com.aeriotv.android.feature.livetv.LocalGuideSearchMatches.current[channel.url]
         ?.let { com.aeriotv.android.feature.livetv.searchMatchLine(it, nowMs / 60_000L * 60_000L) }
-    val textCache = remember(state.rows, row, searchMatchText, showBadges, showSubtitles, clockMode, rail, LocalDensity.current.fontScale, subScale, textContrast, accent) { HashMap<Long, CellText>() }
+    // railWidth too: the rail's name is measured against it, so when it changes
+    // (a future width setting) re-measure instead of reusing layouts cut off at
+    // the old width.
+    val textCache = remember(state.rows, row, searchMatchText, showBadges, showSubtitles, clockMode, rail, railWidth, LocalDensity.current.fontScale, subScale, textContrast, accent) { HashMap<Long, CellText>() }
     val rangeCache = remember(state.rows, row, clockMode) { HashMap<Long, String>() }
     val railWidthPx = with(LocalDensity.current) { railWidth.toPx() }
     val logos = LocalLogoCache.current
