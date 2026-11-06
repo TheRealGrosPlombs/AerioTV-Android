@@ -2041,7 +2041,7 @@ private fun GroupPills(
  * (120dp x Display Scale). 2.5 shows much more of the channel name. Intended to
  * become a user setting; keep any stored value clamped to a sensible range.
  */
-internal const val GUIDE_CHANNEL_WIDTH_SCALE_DEFAULT = 2.5f
+internal const val GUIDE_CHANNEL_WIDTH_SCALE_DEFAULT = 2 // 2.5f
 
 /** Upper bound for the channel column as a fraction of the screen width. */
 internal const val GUIDE_CHANNEL_MAX_SCREEN_SHARE = 0.40f

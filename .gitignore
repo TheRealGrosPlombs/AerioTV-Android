@@ -38,6 +38,7 @@ keystore.properties
 *.bak
 *.orig
 *.swp
+gradle commands.txt
 
 # AI-assistant instructions, local only
 CLAUDE.md
