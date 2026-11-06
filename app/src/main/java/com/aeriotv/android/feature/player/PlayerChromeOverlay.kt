@@ -93,6 +93,8 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
@@ -2186,6 +2188,9 @@ fun SubtitlesSheet(
     }
 }
 
+/** Audio Sync step for the -/+ buttons (matches the slider's 50 ms snap). */
+private const val AUDIO_SYNC_STEP_MS = 50L
+
 /**
  * Sister sheet to [SubtitlesSheet] for picking the active audio track. Same
  * RadioButton-row layout so it reads identically; difference is no "Off" row
@@ -2200,8 +2205,21 @@ fun AudioTracksSheet(
     onSelect: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    // One focus requester per track row, so Up from the Audio Sync buttons can
+    // return to the track that is currently selected (or the last one).
+    val trackFocus = remember(tracks) { tracks.associate { it.id to FocusRequester() } }
+    val upTarget = currentTrackId?.let { trackFocus[it] }
+        ?: trackFocus.values.lastOrNull()
+        ?: FocusRequester.Default
     com.aeriotv.android.ui.FormFactorModal(onDismiss = onDismiss) {
-        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
+        // Scrollable: on TV this sits in a dialog capped in height, so with
+        // several audio tracks the Audio Sync buttons were pushed off the
+        // bottom. A focused item is scrolled into view automatically.
+        Column(
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 4.dp),
+        ) {
             Text(
                 text = "Audio Track",
                 style = MaterialTheme.typography.titleMedium,
@@ -2231,6 +2249,7 @@ fun AudioTracksSheet(
                         label = label,
                         selected = currentTrackId == track.id,
                         onClick = { onSelect(track.id) },
+                        modifier = Modifier.focusRequester(trackFocus.getValue(track.id)),
                     )
                 }
             }
@@ -2272,13 +2291,32 @@ fun AudioTracksSheet(
                 onValueChange = { applySync((it / 50f).roundToInt() * 50L) },
                 valueRange = com.aeriotv.android.core.playback.AudioSyncOffset.MIN_MS.toFloat()..
                     com.aeriotv.android.core.playback.AudioSyncOffset.MAX_MS.toFloat(),
+                // Touch-only: a D-pad moves it ~1% per press (rounded away by the
+                // 50 ms snap) and it sat between the tracks and the buttons, so
+                // Down stopped on it. Skip it for the remote; the -/+ buttons
+                // below are the remote control for this.
+                modifier = Modifier.focusProperties { canFocus = false },
             )
+            // Remote: Down from the last track lands on "-50 ms"; Up from any of
+            // these returns to the selected audio track.
+            val syncButton = Modifier
+                .focusProperties { up = upTarget }
+                .dpadFocusRing(
+                    shape = RoundedCornerShape(20.dp),
+                    washTint = MaterialTheme.colorScheme.primary,
+                )
             Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { applySync(syncMs - 100L) }) { Text("-100 ms") }
-                TextButton(onClick = { applySync(syncMs + 100L) }) { Text("+100 ms") }
+                TextButton(
+                    onClick = { applySync(syncMs - AUDIO_SYNC_STEP_MS) },
+                    modifier = syncButton,
+                ) { Text("-$AUDIO_SYNC_STEP_MS ms") }
+                TextButton(
+                    onClick = { applySync(syncMs + AUDIO_SYNC_STEP_MS) },
+                    modifier = syncButton,
+                ) { Text("+$AUDIO_SYNC_STEP_MS ms") }
                 Spacer(Modifier.weight(1f))
                 if (syncMs != 0L) {
-                    TextButton(onClick = { applySync(0L) }) { Text("Reset") }
+                    TextButton(onClick = { applySync(0L) }, modifier = syncButton) { Text("Reset") }
                 }
             }
             Text(
@@ -2492,9 +2530,14 @@ private val PLAYBACK_SPEEDS = listOf(
 )
 
 @Composable
-private fun SubtitleRow(label: String, selected: Boolean, onClick: () -> Unit) {
+private fun SubtitleRow(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
