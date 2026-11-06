@@ -89,6 +89,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { prefs.setChannelLogoSize(value) }
     }
 
+    /** Settings > Live TV > Guide Presentation > Channel Column Width, percent of original. */
+    val guideChannelWidthPct: StateFlow<Int> = prefs.guideChannelWidthPct
+        .stateIn(viewModelScope, SharingStarted.Eagerly, com.aeriotv.android.core.preferences.GUIDE_CHANNEL_WIDTH_PCT_DEFAULT)
+    fun setGuideChannelWidthPct(percent: Int) {
+        viewModelScope.launch { prefs.setGuideChannelWidthPct(percent) }
+    }
+
     val showChannelNumbers: StateFlow<Boolean> = prefs.showChannelNumbers
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val showChannelNames: StateFlow<Boolean> = prefs.showChannelNames

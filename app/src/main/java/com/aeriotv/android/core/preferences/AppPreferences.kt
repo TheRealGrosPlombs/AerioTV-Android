@@ -92,6 +92,14 @@ private val Context.appDataStore: DataStore<Preferences> by preferencesDataStore
 const val GUIDE_SCALE_MIN = 0.5f
 const val GUIDE_SCALE_MAX = 2.0f
 
+/**
+ * Guide channel column width, as a percent of the original width (the code's
+ * 120dp x Display Scale on TV, 78dp elsewhere). 50% to 250% in 50% steps;
+ * 100 = original. Settings > Live TV > Guide Presentation > Channel Column Width.
+ */
+const val GUIDE_CHANNEL_WIDTH_PCT_DEFAULT = 100
+val GUIDE_CHANNEL_WIDTH_PCT_STEPS: List<Int> = listOf(50, 100, 150, 200, 250)
+
 /** App-wide Text Size bounds (Appearance > Text Size). 5% stops, default 1.0. */
 const val TEXT_SCALE_MIN = 0.85f
 const val TEXT_SCALE_MAX = 1.50f
@@ -494,6 +502,23 @@ class AppPreferences @Inject constructor(
     suspend fun setGuideScale(value: Float) {
         store.edit {
             it[KEY_GUIDE_SCALE.s()] = value.coerceIn(GUIDE_SCALE_MIN, GUIDE_SCALE_MAX).toDouble()
+        }
+    }
+
+    /**
+     * Guide channel column width, percent of the original (see
+     * [GUIDE_CHANNEL_WIDTH_PCT_STEPS]). Whatever is stored is clamped to the
+     * ladder's range. Device-local on purpose: not profile scoped and not in
+     * the synced settings registry, so the shared sync schema is untouched.
+     */
+    val guideChannelWidthPct: Flow<Int> = scopedData.map {
+        (it[KEY_GUIDE_CHANNEL_WIDTH_PCT] ?: GUIDE_CHANNEL_WIDTH_PCT_DEFAULT)
+            .coerceIn(GUIDE_CHANNEL_WIDTH_PCT_STEPS.first(), GUIDE_CHANNEL_WIDTH_PCT_STEPS.last())
+    }
+    suspend fun setGuideChannelWidthPct(percent: Int) {
+        store.edit {
+            it[KEY_GUIDE_CHANNEL_WIDTH_PCT] = percent
+                .coerceIn(GUIDE_CHANNEL_WIDTH_PCT_STEPS.first(), GUIDE_CHANNEL_WIDTH_PCT_STEPS.last())
         }
     }
 
@@ -3002,6 +3027,7 @@ class AppPreferences @Inject constructor(
         val KEY_DISPLAY_SCALE_MOVIES = doublePreferencesKey("display_scale_movies")
         val KEY_DISPLAY_SCALE_LIVE_TV = doublePreferencesKey("display_scale_live_tv")
         val KEY_GUIDE_SCALE = doublePreferencesKey("guide_scale")
+        val KEY_GUIDE_CHANNEL_WIDTH_PCT = intPreferencesKey("guide_channel_width_pct")
         val KEY_TEXT_SCALE = doublePreferencesKey("text_scale")
         val KEY_SUBTEXT_SCALE = doublePreferencesKey("subtext_scale")
         val KEY_TEXT_CONTRAST = doublePreferencesKey("text_contrast")

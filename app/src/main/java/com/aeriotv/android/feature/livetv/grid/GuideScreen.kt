@@ -197,6 +197,8 @@ fun GuideScreen(
     val guideScale by settingsVm.guideScale.collectAsStateWithLifecycle()
     val categoryPalette by settingsVm.categoryPalette.collectAsStateWithLifecycle(initialValue = com.aeriotv.android.core.category.CategoryPaletteState.Default)
     val displayScaleLiveTv by settingsVm.displayScaleLiveTV.collectAsStateWithLifecycle()
+    // Channel column width, percent of the original (Settings > Live TV).
+    val guideChannelWidthPct by settingsVm.guideChannelWidthPct.collectAsStateWithLifecycle()
     val hiddenGroups by settingsVm.hiddenGroups.collectAsStateWithLifecycle()
     val groupSortModeRaw by settingsVm.groupSortMode.collectAsStateWithLifecycle()
     val groupOrder by settingsVm.groupOrder.collectAsStateWithLifecycle()
@@ -265,19 +267,16 @@ fun GuideScreen(
     // with the app Text Size (not the system font size, unchanged from before).
     val appTextScale = com.aeriotv.android.ui.scale.LocalAppTextScale.current
     val hourWidth = if (isTv) 300.dp * guideScale * tvComfortScale else 320.dp * guideScale
-    // Channel column (logo + number + name). TV only; phones keep 78dp.
-    // FUTURE USER SETTING: this multiplier is the one value to replace with a
-    // preference (collect it above like guideScale / displayScaleLiveTv and
-    // pass it here). 1.0 = the old stock width.
-    val channelWidthScale = GUIDE_CHANNEL_WIDTH_SCALE_DEFAULT
-    // Never let the column take more than this share of the screen, so the
-    // program strip keeps room even with a large Display Scale or setting.
+    // Channel column (logo + number + name). The original width (120dp x
+    // Display Scale on TV, 78dp elsewhere) times the user's Settings > Live TV >
+    // Guide Presentation > Channel Column Width (50% to 250%, 100% = original).
+    val channelWidthScale = guideChannelWidthPct / 100f
+    // Never narrower than a logo needs, and never more than this share of the
+    // screen, so the program strip keeps room even at 250% with a large
+    // Display Scale. 100% is untouched on any normal screen.
     val railMaxWidth = (LocalConfiguration.current.screenWidthDp * GUIDE_CHANNEL_MAX_SCREEN_SHARE).dp
-    val railWidth = if (isTv) {
-        minOf(120.dp * tvComfortScale * channelWidthScale, railMaxWidth)
-    } else {
-        78.dp
-    }
+    val railBaseWidth = if (isTv) 120.dp * tvComfortScale else 78.dp
+    val railWidth = minOf(maxOf(railBaseWidth * channelWidthScale, GUIDE_CHANNEL_MIN_WIDTH), railMaxWidth)
     // Phone cells carry the subtitle and two description lines (Logan
     // 2026-09-05, EPGGuideView.swift:3415: 98pt on the phone idiom, 72 on
     // the iPad), so they are taller. Phone = smallest width under 600dp,
@@ -2036,15 +2035,11 @@ private fun GroupPills(
     }
 }
 
-/**
- * TV guide channel column width as a multiple of the original stock width
- * (120dp x Display Scale). 2.5 shows much more of the channel name. Intended to
- * become a user setting; keep any stored value clamped to a sensible range.
- */
-internal const val GUIDE_CHANNEL_WIDTH_SCALE_DEFAULT = 2 // 2.5f
-
 /** Upper bound for the channel column as a fraction of the screen width. */
 internal const val GUIDE_CHANNEL_MAX_SCREEN_SHARE = 0.40f
+
+/** Floor for the channel column, so 50% still has room for a logo. */
+internal val GUIDE_CHANNEL_MIN_WIDTH = 56.dp
 
 private const val QUANTUM_MS = 15 * 60_000L
 

@@ -55,6 +55,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aeriotv.android.core.category.CategoryPaletteState
 import com.aeriotv.android.core.category.ProgramCategory
 import com.aeriotv.android.ui.adaptive.LocalTabBarBottomInset
+import com.aeriotv.android.core.preferences.GUIDE_CHANNEL_WIDTH_PCT_DEFAULT
+import com.aeriotv.android.core.preferences.GUIDE_CHANNEL_WIDTH_PCT_STEPS
 import com.aeriotv.android.core.preferences.GuideProgramInfoButton
 import com.aeriotv.android.ui.scale.AlertDialog
 import com.aeriotv.android.ui.settings.SettingsActionRow
@@ -112,6 +114,9 @@ fun LiveTvSettingsScreen(
     val showEpgBadges by viewModel.showEpgBadges(isTv).collectAsStateWithLifecycle(initialValue = true)
     val hiddenEpgBadges by viewModel.hiddenEpgBadges.collectAsStateWithLifecycle(initialValue = emptySet())
     val scaleLiveTV by viewModel.displayScaleLiveTV.collectAsStateWithLifecycle(initialValue = 1.0f)
+    val guideChannelWidthPct by viewModel.guideChannelWidthPct.collectAsStateWithLifecycle(
+        initialValue = GUIDE_CHANNEL_WIDTH_PCT_DEFAULT,
+    )
     val programInfoButton by viewModel.guideProgramInfoButton
         .collectAsStateWithLifecycle(initialValue = GuideProgramInfoButton.OFF)
     val pibGuide by viewModel.programInfoButtonGuide.collectAsStateWithLifecycle(initialValue = false)
@@ -197,6 +202,18 @@ fun LiveTvSettingsScreen(
                             leadingIcon = if (isTv) Icons.Filled.TextFields else null,
                             checked = showChannelNames,
                             onCheckedChange = viewModel::setShowChannelNames,
+                        )
+                        // Width of the Guide's channel column (logo, number, name),
+                        // 50% to 250% of the original in 50% steps. Wider shows more
+                        // of long channel names; narrower leaves more room for the
+                        // program grid. Same stepped row as Logo Size above.
+                        SteppedSliderRow(
+                            label = "Channel Column Width",
+                            values = GUIDE_CHANNEL_WIDTH_PCT_STEPS,
+                            selected = guideChannelWidthPct,
+                            format = { "$it%" },
+                            onSelect = viewModel::setGuideChannelWidthPct,
+                            footer = "Width of the channel column in the Guide. 100% is the original width; go wider to show more of long channel names.",
                         )
                         SettingsToggleRow(
                             title = "Show Program Subtitles",
